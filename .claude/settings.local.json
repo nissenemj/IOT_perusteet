@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node server.js)",
+      "Bash(curl -X POST http://localhost:3000/notify -H \"Content-Type: application/json\" -d \"{\"\"message\"\":\"\"Testi viesti Discordiin\"\"}\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

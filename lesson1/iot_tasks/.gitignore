@@ -1,0 +1,21 @@
+# Älä pushaa oikeita salasanoja ja API-avaimia GitHubiin!
+config.py
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# MicroPython
+*.mpy
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
