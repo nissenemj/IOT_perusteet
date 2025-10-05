@@ -11,4 +11,7 @@ wss.on('connection', (ws) => {
             }
         });
     });
+    ws.on('close', () => {
+        console.log('Yhteys katkaistu');
+    });
 });
