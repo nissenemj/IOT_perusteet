@@ -110,15 +110,42 @@
 </body>
 <script>
     const ws = new WebSocket('ws://localhost:8080');
-    socket.onopen() = () => {
-        document.getElementById('messageInput').innerText += 'Yhdistetty\n';
+    const messagesDiv = document.getElementById('messages');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    ws.onopen = () => {
+        messagesDiv.innerHTML += '<div class="message system"><span class="timestamp">' + new Date().toLocaleTimeString() + '</span>Yhdistetty palvelimeen</div>';
+        messageInput.disabled = false;
+        sendBtn.disabled = false;
+        messageInput.focus();
     }
-    socket.onmessage = (event) => {
-        document.getElementById('messageInput').innerText += event.data + '\n';
+
+    ws.onmessage = (event) => {
+        messagesDiv.innerHTML += '<div class="message received"><span class="timestamp">' + new Date().toLocaleTimeString() + '</span>' + event.data + '</div>';
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    ws.onclose = () => {
+        messagesDiv.innerHTML += '<div class="message system"><span class="timestamp">' + new Date().toLocaleTimeString() + '</span>Yhteys katkaistu</div>';
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+    }
+
     function sendMessage() {
-        const message = document.getElementById('messageInput').value;
-        ws.send(message);
+        const message = messageInput.value;
+        if (message.trim()) {
+            ws.send(message);
+            messagesDiv.innerHTML += '<div class="message sent"><span class="timestamp">' + new Date().toLocaleTimeString() + '</span>' + message + '</div>';
+            messageInput.value = '';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
     }
+
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
 </script>
 </html>
