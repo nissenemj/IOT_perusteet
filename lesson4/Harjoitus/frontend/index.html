@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IoT Dashboard - Real-time Monitoring</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+    .status::before { content: '●'; font-size: 1.2rem; }
+    .status.connected {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status.disconnected {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);
+      backdrop-filter: blur(10px);
+      padding: 24px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    canvas {
+      max-width: 100%;
+      height: 300px;
+      background: rgba(7, 16, 40, 0.5);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+      font-weight: 600;
+      color: #60a5fa;
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      transition: background 0.2s ease;
+    }
+    tr:hover td { background: rgba(59, 130, 246, 0.08); }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(51, 65, 85, 0.6) 100%);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+    .stat-box:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+      border-color: rgba(96, 165, 250, 0.3);
+    }
+
+    .stat-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      opacity: 0.8;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin: 8px 0;
+      transition: all 0.5s ease;
+    }
+
+    .stat-value.updated {
+      animation: pulse 0.5s ease;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.7;
+      margin-top: 4px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    footer {
+      text-align: center;
+      padding: 24px;
+      margin-top: 32px;
+      color: #64748b;
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 12px; }
+      h1 { font-size: 1.4rem; }
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .grid { grid-template-columns: 1fr; }
+      .card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🌡️ IoT Dashboard</h1>
+      <div class="status" id="conn">Connecting...</div>
+      <a class="btn" href="/export.csv" style="margin-left:auto">📊 Export CSV</a>
+    </header>
+
+    <div class="card">
+      <h4>📈 Real-time Statistics</h4>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-icon">🌡️</div>
+          <div class="stat-value" id="statTempCurrent">--</div>
+          <div class="stat-label">Current Temp (°C)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="statTempAvg">--</div>
+          <div class="stat-label">Avg Temp (°C)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">❄️</div>
+          <div class="stat-value" id="statTempMin">--</div>
+          <div class="stat-label">Min Temp (°C)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value" id="statTempMax">--</div>
+          <div class="stat-label">Max Temp (°C)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">💧</div>
+          <div class="stat-value" id="statHumCurrent">--</div>
+          <div class="stat-label">Current Hum (%)</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-icon">💧</div>
+          <div class="stat-value" id="statHumAvg">--</div>
+          <div class="stat-label">Avg Hum (%)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h4>🌡️ Temperature Trend</h4>
+        <canvas id="chartTemp"></canvas>
+      </div>
+      <div class="card">
+        <h4>💧 Humidity Trend</h4>
+        <canvas id="chartHum"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>📊 Combined Analysis</h4>
+      <canvas id="chartCombined"></canvas>
+    </div>
+
+    <div class="card">
+      <h4>📋 Recent Measurements</h4>
+      <table id="readingsTable">
+        <thead><tr><th>Time</th><th>Temp (°C)</th><th>Hum (%)</th><th>Source</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>IoT Monitoring System | Real-time Data Visualization</p>
+      <p style="margin-top: 8px; opacity: 0.6;">Powered by Node.js, Socket.io & Chart.js</p>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const MAX_POINTS = 100;
+
+    // Data arrays
+    const labels = [];
+    const dataTemp = [];
+    const dataHum = [];
+
+    // Temperature chart
+    const ctxTemp = document.getElementById('chartTemp').getContext('2d');
+    const chartTemp = new Chart(ctxTemp, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Temperature (°C)',
+          data: dataTemp,
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.2)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#ef4444',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 750, easing: 'easeInOutQuart' },
+        scales: {
+          x: {
+            display: true,
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: { maxTicksLimit: 8, color: '#94a3b8', font: { size: 11 } }
+          },
+          y: {
+            beginAtZero: false,
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: { color: '#94a3b8', font: { size: 11 } }
+          }
+        },
+        plugins: {
+          legend: { labels: { color: '#e2e8f0', font: { size: 12, weight: '500' } } },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(96, 165, 250, 0.5)',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false
+          }
+        }
+      }
+    });
+
+    // Humidity chart
+    const ctxHum = document.getElementById('chartHum').getContext('2d');
+    const chartHum = new Chart(ctxHum, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Humidity (%)',
+          data: dataHum,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 750, easing: 'easeInOutQuart' },
+        scales: {
+          x: {
+            display: true,
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: { maxTicksLimit: 8, color: '#94a3b8', font: { size: 11 } }
+          },
+          y: {
+            beginAtZero: true,
+            max: 100,
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: { color: '#94a3b8', font: { size: 11 } }
+          }
+        },
+        plugins: {
+          legend: { labels: { color: '#e2e8f0', font: { size: 12, weight: '500' } } },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(96, 165, 250, 0.5)',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: false
+          }
+        }
+      }
+    });
+
+    // Combined chart
+    const ctxCombined = document.getElementById('chartCombined').getContext('2d');
+    const chartCombined = new Chart(ctxCombined, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Temperature (°C)',
+            data: dataTemp,
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            borderWidth: 2,
+            yAxisID: 'y',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#ef4444',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          },
+          {
+            label: 'Humidity (%)',
+            data: dataHum,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            borderWidth: 2,
+            yAxisID: 'y1',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 2,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 750, easing: 'easeInOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: {
+            display: true,
+            grid: { color: 'rgba(148, 163, 184, 0.1)' },
+            ticks: { maxTicksLimit: 10, color: '#94a3b8', font: { size: 11 } }
+          },
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Temperature (°C)',
+              color: '#ef4444',
+              font: { size: 12, weight: '600' }
+            },
+            grid: { color: 'rgba(239, 68, 68, 0.1)' },
+            ticks: { color: '#94a3b8', font: { size: 11 } }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Humidity (%)',
+              color: '#3b82f6',
+              font: { size: 12, weight: '600' }
+            },
+            grid: { drawOnChartArea: false },
+            max: 100,
+            ticks: { color: '#94a3b8', font: { size: 11 } }
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#e2e8f0',
+              font: { size: 12, weight: '500' },
+              usePointStyle: true,
+              padding: 15
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            titleColor: '#e2e8f0',
+            bodyColor: '#cbd5e1',
+            borderColor: 'rgba(96, 165, 250, 0.5)',
+            borderWidth: 1,
+            padding: 12,
+            displayColors: true
+          }
+        }
+      }
+    });
+
+    function updateStatistics() {
+      if (dataTemp.length === 0) return;
+
+      const temps = dataTemp.slice(-MAX_POINTS);
+      const hums = dataHum.slice(-MAX_POINTS);
+
+      const tempCurrent = temps[temps.length - 1];
+      const tempAvg = temps.reduce((a, b) => a + b, 0) / temps.length;
+      const tempMin = Math.min(...temps);
+      const tempMax = Math.max(...temps);
+
+      const humCurrent = hums[hums.length - 1];
+      const humAvg = hums.reduce((a, b) => a + b, 0) / hums.length;
+
+      // Animate stat updates
+      updateStatValue('statTempCurrent', tempCurrent.toFixed(1));
+      updateStatValue('statTempAvg', tempAvg.toFixed(1));
+      updateStatValue('statTempMin', tempMin.toFixed(1));
+      updateStatValue('statTempMax', tempMax.toFixed(1));
+      updateStatValue('statHumCurrent', humCurrent.toFixed(1));
+      updateStatValue('statHumAvg', humAvg.toFixed(1));
+    }
+
+    function updateStatValue(id, value) {
+      const elem = document.getElementById(id);
+      if (elem.textContent !== value) {
+        elem.classList.add('updated');
+        elem.textContent = value;
+        setTimeout(() => elem.classList.remove('updated'), 500);
+      }
+    }
+
+    function addReading(r) {
+      const t = new Date(r.timestamp).toLocaleTimeString();
+      labels.push(t);
+      dataTemp.push(r.temp);
+      dataHum.push(r.hum);
+
+      if (labels.length > MAX_POINTS) {
+        labels.shift();
+        dataTemp.shift();
+        dataHum.shift();
+      }
+
+      chartTemp.update('none');
+      chartHum.update('none');
+      chartCombined.update('none');
+      updateStatistics();
+
+      const tbody = document.querySelector('#readingsTable tbody');
+      const tr = document.createElement('tr');
+      const fullTime = new Date(r.timestamp).toLocaleString();
+      tr.innerHTML = `<td>${fullTime}</td><td>${r.temp.toFixed(2)}</td><td>${r.hum.toFixed(2)}</td><td>${r.source}</td>`;
+      tbody.insertBefore(tr, tbody.firstChild);
+      while (tbody.children.length > 50) tbody.removeChild(tbody.lastChild);
+    }
+
+    // Initial load
+    fetch('/data').then(r=>r.json()).then(j=>{
+      const history = j.readings || [];
+      history.forEach(addReading);
+    }).catch(e=>console.warn('Initial load failed', e));
+
+    // Socket events
+    socket.on('connect', () => {
+      const conn = document.getElementById('conn');
+      conn.textContent = 'Connected';
+      conn.className = 'status connected';
+    });
+
+    socket.on('disconnect', () => {
+      const conn = document.getElementById('conn');
+      conn.textContent = 'Disconnected';
+      conn.className = 'status disconnected';
+    });
+
+    socket.on('history', (arr) => { arr.forEach(addReading); });
+    socket.on('reading', (r) => { addReading(r); });
+  </script>
+</body>
+</html>
